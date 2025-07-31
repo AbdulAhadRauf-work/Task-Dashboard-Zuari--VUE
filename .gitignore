@@ -1,7 +1,7 @@
-*.db
-*.pyc
-alembic/
-*.env
-__pycache__
-uploads
-*.ini
+# *.db
+# *.pyc
+# alembic/
+# *.env
+# __pycache__
+# uploads
+# *.ini
