@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Dashboard</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        [v-cloak] { display: none; }
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        .slide-enter-active, .slide-leave-active { transition: all 0.3s ease; }
+        .slide-enter-from { transform: translateX(-100%); }
+        .slide-leave-to { transform: translateX(100%); }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <div id="app" v-cloak>
+        <!-- Loading Spinner -->
+        <div v-if="loading" class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+
+        <!-- Login Page -->
+        <div v-if="currentView === 'login'" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+            <div class="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">Task Dashboard</h1>
+                    <p class="text-gray-600">Professional Task Management System</p>
+                </div>
+                
+                <form @submit.prevent="login" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                        <input 
+                            v-model="loginForm.username" 
+                            type="email" 
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter your email"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <input 
+                            v-model="loginForm.password" 
+                            type="password" 
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter your password"
+                        />
+                    </div>
+                    <button 
+                        type="submit"
+                        :disabled="loading"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 disabled:opacity-50"
+                    >
+                        {{ loading ? 'Signing In...' : 'Sign In' }}
+                    </button>
+                </form>
+                
+                <div class="mt-6 text-center">
+                    <button 
+                        @click="currentView = 'register'"
+                        class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                        Don't have an account? Register here
+                    </button>
+                </div>
+                
+                <div v-if="error" class="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                    {{ error }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Register Page -->
+        <div v-if="currentView === 'register'" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+            <div class="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
+                    <p class="text-gray-600">Join our task management system</p>
+                </div>
+                
+                <form @submit.prevent="register" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                        <input 
+                            v-model="registerForm.full_name" 
+                            type="text"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter your full name"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                        <input 
+                            v-model="registerForm.email" 
+                            type="email" 
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter your email"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <input 
+                            v-model="registerForm.password" 
+                            type="password" 
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter your password"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                        <select 
+                            v-model="registerForm.role"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                            <option value="worker">Worker</option>
+                            <option value="manager">Manager</option>
+                            <option value="ceo">CEO</option>
+                        </select>
+                    </div>
+                    <button 
+                        type="submit"
+                        :disabled="loading"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 disabled:opacity-50"
+                    >
+                        {{ loading ? 'Creating Account...' : 'Create Account' }}
+                    </button>
+                </form>
+                
+                <div class="mt-6 text-center">
+                    <button 
+                        @click="currentView = 'login'"
+                        class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                        Already have an account? Sign in
+                    </button>
+                </div>
+                
+                <div v-if="error" class="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                    {{ error }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard -->
+        <div v-if="currentView === 'dashboard' && user" class="min-h-screen bg-gray-50">
+            <!-- Header -->
+            <header class="bg-white shadow-sm border-b border-gray-200">
+                <div class="px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <h1 class="text-2xl font-bold text-gray-900">Task Dashboard</h1>
+                            <span class="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+                                {{ user.role.toUpperCase() }}
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <!-- Notifications -->
+                            <div class="relative">
+                                <button 
+                                    @click="showNotifications = !showNotifications"
+                                    class="p-2 text-gray-400 hover:text-gray-600 relative"
+                                >
+                                    <i class="fas fa-bell text-lg"></i>
+                                    <span v-if="notifications.length > 0" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                        {{ notifications.length }}
+                                    </span>
+                                </button>
+                                
+                                <!-- Notifications Dropdown -->
+                                <div v-if="showNotifications" class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                                    <div class="p-4 border-b border-gray-200">
+                                        <h3 class="text-lg font-semibold text-gray-900">Notifications</h3>
+                                    </div>
+                                    <div class="max-h-64 overflow-y-auto">
+                                        <div v-if="notifications.length === 0" class="p-4 text-gray-500 text-center">
+                                            No new notifications
+                                        </div>
+                                        <div v-for="notification in notifications" :key="notification.id" class="p-4 border-b border-gray-100 hover:bg-gray-50">
+                                            <p class="text-sm text-gray-900">{{ notification.message }}</p>
+                                            <p class="text-xs text-gray-500 mt-1">{{ formatDate(notification.timestamp) }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="p-2 border-t border-gray-200">
+                                        <button 
+                                            @click="clearNotifications"
+                                            class="w-full text-sm text-blue-600 hover:text-blue-800 py-2"
+                                        >
+                                            Clear All
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center space-x-2">
+                                <span class="text-sm text-gray-700">{{ user.full_name || user.email }}</span>
+                                <button 
+                                    @click="logout"
+                                    class="px-3 py-1 text-sm text-red-600 hover:text-red-800 border border-red-200 hover:border-red-300 rounded"
+                                >
+                                    <i class="fas fa-sign-out-alt mr-1"></i>
+                                    Logout
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Navigation Tabs -->
+            <nav class="bg-white border-b border-gray-200">
+                <div class="px-6">
+                    <div class="flex space-x-8">
+                        <button 
+                            @click="activeTab = 'dashboards'"
+                            :class="activeTab === 'dashboards' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                            class="py-4 px-1 border-b-2 font-medium text-sm transition duration-200"
+                        >
+                            <i class="fas fa-tachometer-alt mr-2"></i>
+                            Dashboards
+                        </button>
+                        <button 
+                            v-if="selectedDashboard"
+                            @click="activeTab = 'tasks'"
+                            :class="activeTab === 'tasks' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+                            class="py-4 px-1 border-b-2 font-medium text-sm transition duration-200"
+                        >
+                            <i class="fas fa-tasks mr-2"></i>
+                            Tasks - {{ selectedDashboard.name }}
+                        </button>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Content Area -->
+            <main class="p-6">
+                <!-- Dashboards Tab -->
+                <div v-if="activeTab === 'dashboards'">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-semibold text-gray-900">Dashboards</h2>
+                        <button 
+                            v-if="user.role === 'ceo' || user.role === 'manager'"
+                            @click="showCreateDashboard = true"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200"
+                        >
+                            <i class="fas fa-plus mr-2"></i>
+                            Create Dashboard
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div 
+                            v-for="dashboard in dashboards" 
+                            :key="dashboard.id"
+                            class="bg-white rounded-lg shadow-md hover:shadow-lg transition duration-200 cursor-pointer border border-gray-200"
+                            @click="selectDashboard(dashboard)"
+                        >
+                            <div class="p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-lg font-semibold text-gray-900">{{ dashboard.name }}</h3>
+                                    <button 
+                                        v-if="user.role === 'ceo'"
+                                        @click.stop="deleteDashboard(dashboard.id)"
+                                        class="text-red-500 hover:text-red-700 p-1"
+                                        title="Delete Dashboard"
+                                    >
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                <p class="text-gray-600 text-sm mb-4">{{ dashboard.description || 'No description available' }}</p>
+                                <div class="flex items-center justify-between text-sm text-gray-500">
+                                    <span>Owner: {{ dashboard.owner.full_name || dashboard.owner.email }}</span>
+                                    <span>{{ dashboard.tasks ? dashboard.tasks.length : 0 }} tasks</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div v-if="dashboards.length === 0" class="text-center py-12">
+                        <i class="fas fa-tachometer-alt text-gray-400 text-6xl mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No dashboards available</h3>
+                        <p class="text-gray-500">
+                            {{ user.role === 'worker' ? 'You haven\'t been assigned to any dashboards yet.' : 'Create your first dashboard to get started.' }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Tasks Tab -->
+                <div v-if="activeTab === 'tasks' && selectedDashboard">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-xl font-semibold text-gray-900">Tasks</h2>
+                            <p class="text-gray-600">{{ selectedDashboard.name }}</p>
+                        </div>
+                        <button 
+                            v-if="user.role === 'ceo' || user.role === 'manager'"
+                            @click="showCreateTask = true"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200"
+                        >
+                            <i class="fas fa-plus mr-2"></i>
+                            Create Task
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                        <div 
+                            v-for="task in tasks" 
+                            :key="task.id"
+                            class="bg-white rounded-lg shadow-md border border-gray-200"
+                        >
+                            <div class="p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-lg font-semibold text-gray-900">{{ task.title }}</h3>
+                                    <span 
+                                        :class="getStatusColor(task.status)"
+                                        class="px-2 py-1 text-xs font-medium rounded-full"
+                                    >
+                                        {{ task.status }}
+                                    </span>
+                                </div>
+                                
+                                <p class="text-gray-600 text-sm mb-4">{{ task.description || 'No description available' }}</p>
+                                
+                                <div class="space-y-2 mb-4">
+                                    <div v-if="task.deadline" class="flex items-center text-sm text-gray-500">
+                                        <i class="fas fa-calendar-alt mr-2"></i>
+                                        Due: {{ formatDate(task.deadline) }}
+                                    </div>
+                                    <div v-if="task.workers && task.workers.length > 0" class="flex items-center text-sm text-gray-500">
+                                        <i class="fas fa-users mr-2"></i>
+                                        {{ task.workers.length }} assigned
+                                    </div>
+                                    <div class="flex items-center text-sm text-gray-500">
+                                        <i class="fas fa-comments mr-2"></i>
+                                        {{ task.comments ? task.comments.length : 0 }} comments
+                                    </div>
+                                </div>
+
+                                <div class="flex space-x-2">
+                                    <button 
+                                        @click="selectTask(task)"
+                                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium transition duration-200"
+                                    >
+                                        View Details
+                                    </button>
+                                    <button 
+                                        v-if="user.role === 'ceo' || user.role === 'manager'"
+                                        @click="editTask(task)"
+                                        class="px-3 py-2 border border-gray-300 hover:border-gray-400 text-gray-700 rounded text-sm transition duration-200"
+                                    >
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div v-if="tasks.length === 0" class="text-center py-12">
+                        <i class="fas fa-tasks text-gray-400 text-6xl mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No tasks available</h3>
+                        <p class="text-gray-500">
+                            {{ user.role === 'worker' ? 'You haven\'t been assigned any tasks yet.' : 'Create your first task to get started.' }}
+                        </p>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Task Detail Modal -->
+        <div v-if="selectedTask" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-screen overflow-y-auto">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xl font-semibold text-gray-900">{{ selectedTask.title }}</h2>
+                        <button 
+                            @click="selectedTask = null"
+                            class="text-gray-400 hover:text-gray-600"
+                        >
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Task Info -->
+                        <div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                    <p class="text-gray-900">{{ selectedTask.description || 'No description available' }}</p>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                        <span 
+                                            :class="getStatusColor(selectedTask.status)"
+                                            class="inline-block px-2 py-1 text-xs font-medium rounded-full"
+                                        >
+                                            {{ selectedTask.status }}
+                                        </span>
+                                    </div>
+                                    <div v-if="selectedTask.deadline">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
+                                        <p class="text-gray-900">{{ formatDate(selectedTask.deadline) }}</p>
+                                    </div>
+                                </div>
+                                
+                                <div v-if="selectedTask.workers && selectedTask.workers.length > 0">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Assigned Workers</label>
+                                    <div class="space-y-2">
+                                        <div 
+                                            v-for="worker in selectedTask.workers" 
+                                            :key="worker.id"
+                                            class="flex items-center space-x-2"
+                                        >
+                                            <div class="bg-blue-100 text-blue-800 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium">
+                                                {{ (worker.full_name || worker.email).charAt(0).toUpperCase() }}
+                                            </div>
+                                            <span class="text-gray-900">{{ worker.full_name || worker.email }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Comments Section -->
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Comments</h3>
+                            
+                            <!-- Add Comment Form -->
+                            <form @submit.prevent="addComment" class="mb-6">
+                                <div class="space-y-3">
+                                    <textarea 
+                                        v-model="newComment.content"
+                                        placeholder="Add a comment..."
+                                        rows="3"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        required
+                                    ></textarea>
+                                    <div class="flex items-center justify-between">
+                                        <input 
+                                            type="file"
+                                            @change="handleFileSelect"
+                                            class="text-sm text-gray-500"
+                                            accept="*/*"
+                                        />
+                                        <button 
+                                            type="submit"
+                                            :disabled="!newComment.content.trim()"
+                                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition duration-200 disabled:opacity-50"
+                                        >
+                                            Post Comment
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+
+                            <!-- Comments List -->
+                            <div class="space-y-4 max-h-64 overflow-y-auto">
+                                <div 
+                                    v-for="comment in taskComments" 
+                                    :key="comment.id"
+                                    class="border border-gray-200 rounded-lg p-4"
+                                >
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div class="flex items-center space-x-2">
+                                            <div class="bg-gray-100 text-gray-800 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium">
+                                                {{ (comment.author.full_name || comment.author.email).charAt(0).toUpperCase() }}
+                                            </div>
+                                            <div>
+                                                <span class="font-medium text-gray-900">{{ comment.author.full_name || comment.author.email }}</span>
+                                                <span class="text-xs text-gray-500 ml-2">{{ formatDate(comment.created_at) }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            <span 
+                                                :class="getCommentStatusColor(comment.status)"
+                                                class="px-2 py-1 text-xs font-medium rounded-full"
+                                            >
+                                                {{ comment.status }}
+                                            </span>
+                                            <div v-if="user.role === 'ceo' || user.role === 'manager'" class="flex space-x-1">
+                                                <button 
+                                                    @click="updateCommentStatus(comment.id, 'approved')"
+                                                    class="text-green-600 hover:text-green-800 text-sm"
+                                                    title="Approve"
+                                                >
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                                <button 
+                                                    @click="updateCommentStatus(comment.id, 'rejected')"
+                                                    class="text-red-600 hover:text-red-800 text-sm"
+                                                    title="Reject"
+                                                >
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="text-gray-700 mb-2">{{ comment.content }}</p>
+                                    <div v-if="comment.files && comment.files.length > 0" class="space-y-1">
+                                        <div 
+                                            v-for="file in comment.files" 
+                                            :key="file.id"
+                                            class="flex items-center space-x-2 text-sm text-blue-600"
+                                        >
+                                            <i class="fas fa-paperclip"></i>
+                                            <!-- FIX: Construct the full URL for the file link -->
+                                            <a :href="apiBaseUrl + '/uploads/' + file.file_path" target="_blank" class="hover:underline">
+                                                {{ file.file_name }}
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div v-if="taskComments.length === 0" class="text-center py-6 text-gray-500">
+                                    No comments yet. Be the first to comment!
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Dashboard Modal -->
+        <div v-if="showCreateDashboard" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-900">Create New Dashboard</h2>
+                </div>
+                
+                <form @submit.prevent="createDashboard" class="p-6">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                            <input 
+                                v-model="dashboardForm.name"
+                                type="text"
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Enter dashboard name"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                            <textarea 
+                                v-model="dashboardForm.description"
+                                rows="3"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Enter dashboard description"
+                            ></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button 
+                            type="button"
+                            @click="showCreateDashboard = false"
+                            class="px-4 py-2 border border-gray-300 hover:border-gray-400 text-gray-700 rounded-md transition duration-200"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            type="submit"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition duration-200"
+                        >
+                            Create Dashboard
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Create Task Modal -->
+        <div v-if="showCreateTask" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-900">Create New Task</h2>
+                </div>
+                
+                <form @submit.prevent="createTask" class="p-6">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                            <input 
+                                v-model="taskForm.title"
+                                type="text"
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Enter task title"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                            <textarea 
+                                v-model="taskForm.description"
+                                rows="3"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Enter task description"
+                            ></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Deadline</label>
+                            <input 
+                                v-model="taskForm.deadline"
+                                type="datetime-local"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button 
+                            type="button"
+                            @click="showCreateTask = false"
+                            class="px-4 py-2 border border-gray-300 hover:border-gray-400 text-gray-700 rounded-md transition duration-200"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            type="submit"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition duration-200"
+                        >
+                            Create Task
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Task Modal -->
+        <div v-if="showEditTask" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-900">Edit Task</h2>
+                </div>
+                
+                <form @submit.prevent="updateTask" class="p-6">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                            <input 
+                                v-model="editTaskForm.title"
+                                type="text"
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                            <textarea 
+                                v-model="editTaskForm.description"
+                                rows="3"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            ></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                            <select 
+                                v-model="editTaskForm.status"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                                <option value="Pending">Pending</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Completed">Completed</option>
+                                <option value="On Hold">On Hold</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Deadline</label>
+                            <input 
+                                v-model="editTaskForm.deadline"
+                                type="datetime-local"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button 
+                            type="button"
+                            @click="showEditTask = false"
+                            class="px-4 py-2 border border-gray-300 hover:border-gray-400 text-gray-700 rounded-md transition duration-200"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            type="submit"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition duration-200"
+                        >
+                            Update Task
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    // App State
+                    currentView: 'login',
+                    loading: false,
+                    error: null,
+                    user: null,
+                    token: localStorage.getItem('token'),
+                    
+                    // UI State
+                    activeTab: 'dashboards',
+                    showNotifications: false,
+                    showCreateDashboard: false,
+                    showCreateTask: false,
+                    showEditTask: false,
+                    selectedDashboard: null,
+                    selectedTask: null,
+                    
+                    // Data
+                    dashboards: [],
+                    tasks: [],
+                    taskComments: [],
+                    notifications: [],
+                    
+                    // Forms
+                    loginForm: {
+                        username: '',
+                        password: ''
+                    },
+                    registerForm: {
+                        email: '',
+                        password: '',
+                        full_name: '',
+                        role: 'worker'
+                    },
+                    dashboardForm: {
+                        name: '',
+                        description: ''
+                    },
+                    taskForm: {
+                        title: '',
+                        description: '',
+                        deadline: ''
+                    },
+                    editTaskForm: {
+                        title: '',
+                        description: '',
+                        status: '',
+                        deadline: ''
+                    },
+                    newComment: {
+                        content: '',
+                        file: null
+                    },
+                    
+                    // WebSocket
+                    websocket: null,
+                    
+                    // API Base URL
+                    apiBaseUrl: 'http://localhost:8000'
+                }
+            },
+            
+            mounted() {
+                if (this.token) {
+                    this.getCurrentUser();
+                }
+            },
+            
+            methods: {
+                // Authentication
+                async login() {
+                    this.loading = true;
+                    this.error = null;
+                    
+                    try {
+                        const formData = new FormData();
+                        formData.append('username', this.loginForm.username);
+                        formData.append('password', this.loginForm.password);
+                        
+                        const response = await fetch(`${this.apiBaseUrl}/token`, {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        // if (!response.ok) {
+                        //     throw new Error('Invalid credentials');
+                        // }
+                        
+                        const data = await response.json();
+                        this.token = data.access_token;
+                        localStorage.setItem('token', this.token);
+                        
+                        await this.getCurrentUser();
+                        this.currentView = 'dashboard';
+                        this.connectWebSocket();
+                        
+                    } catch (error) {
+                        this.error = error.message;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async register() {
+                    this.loading = true;
+                    this.error = null;
+                    
+                    try {
+                        const response = await fetch(`${this.apiBaseUrl}/users/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(this.registerForm)
+                        });
+                        
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.detail || 'Registration failed');
+                        }
+                        
+                        // Auto login after registration
+                        this.loginForm.username = this.registerForm.email;
+                        this.loginForm.password = this.registerForm.password;
+                        await this.login();
+                        
+                    } catch (error) {
+                        this.error = error.message;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async getCurrentUser() {
+                    try {
+                        const response = await this.apiCall('/users/me');
+                        this.user = response;
+                        this.loadDashboards();
+                    } catch (error) {
+                        this.logout();
+                    }
+                },
+                
+                logout() {
+                    this.token = null;
+                    this.user = null;
+                    this.currentView = 'login';
+                    localStorage.removeItem('token');
+                    if (this.websocket) {
+                        this.websocket.close();
+                    }
+                },
+                
+                // API Helper
+                async apiCall(endpoint, options = {}) {
+                    const url = `${this.apiBaseUrl}${endpoint}`;
+                    const config = {
+                        headers: {
+                            'Authorization': `Bearer ${this.token}`,
+                            'Content-Type': 'application/json',
+                            ...options.headers
+                        },
+                        ...options
+                    };
+                    
+                    const response = await fetch(url, config);
+                    
+                    if (!response.ok) {
+                        if (response.status === 401) {
+                            this.logout();
+                        }
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || 'API call failed');
+                    }
+                    
+                    // Handle responses with no content (like DELETE)
+                    if (response.status === 204) {
+                        return;
+                    }
+
+                    return response.json();
+                },
+                
+                // Dashboard Management
+                async loadDashboards() {
+                    try {
+                        this.dashboards = await this.apiCall('/dashboards/');
+                    } catch (error) {
+                        console.error('Failed to load dashboards:', error);
+                    }
+                },
+                
+                async createDashboard() {
+                    try {
+                        const dashboard = await this.apiCall('/dashboards/', {
+                            method: 'POST',
+                            body: JSON.stringify(this.dashboardForm)
+                        });
+                        
+                        this.loadDashboards(); // Reload all dashboards to get the new one with its relations
+                        this.showCreateDashboard = false;
+                        this.dashboardForm = { name: '', description: '' };
+                        
+                    } catch (error) {
+                        this.error = error.message;
+                    }
+                },
+                
+                async deleteDashboard(dashboardId) {
+                    if (!confirm('Are you sure you want to delete this dashboard? This will also delete all associated tasks and comments.')) {
+                        return;
+                    }
+                    
+                    try {
+                        await this.apiCall(`/dashboards/${dashboardId}`, {
+                            method: 'DELETE'
+                        });
+                        
+                        this.dashboards = this.dashboards.filter(d => d.id !== dashboardId);
+                        if (this.selectedDashboard && this.selectedDashboard.id === dashboardId) {
+                            this.selectedDashboard = null;
+                            this.activeTab = 'dashboards';
+                        }
+                        
+                    } catch (error) {
+                        this.error = error.message;
+                    }
+                },
+                
+                selectDashboard(dashboard) {
+                    this.selectedDashboard = dashboard;
+                    this.activeTab = 'tasks';
+                    this.loadTasks();
+                },
+                
+                // Task Management
+                async loadTasks() {
+                    if (!this.selectedDashboard) return;
+                    
+                    try {
+                        this.tasks = await this.apiCall(`/tasks/dashboard/${this.selectedDashboard.id}`);
+                    } catch (error) {
+                        console.error('Failed to load tasks:', error);
+                    }
+                },
+                
+                async createTask() {
+                    try {
+                        const taskData = {
+                            ...this.taskForm,
+                            dashboard_id: this.selectedDashboard.id
+                        };
+                        
+                        const task = await this.apiCall('/tasks/', {
+                            method: 'POST',
+                            body: JSON.stringify(taskData)
+                        });
+                        
+                        this.loadTasks(); // Reload tasks for the dashboard
+                        this.showCreateTask = false;
+                        this.taskForm = { title: '', description: '', deadline: '' };
+                        
+                    } catch (error) {
+                        this.error = error.message;
+                    }
+                },
+                
+                editTask(task) {
+                    this.editTaskForm = {
+                        title: task.title,
+                        description: task.description,
+                        status: task.status,
+                        deadline: task.deadline ? new Date(task.deadline).toISOString().slice(0, 16) : ''
+                    };
+                    this.editingTaskId = task.id;
+                    this.showEditTask = true;
+                },
+                
+                async updateTask() {
+                    try {
+                        const updatedTask = await this.apiCall(`/tasks/${this.editingTaskId}`, {
+                            method: 'PUT',
+                            body: JSON.stringify(this.editTaskForm)
+                        });
+                        
+                        const index = this.tasks.findIndex(t => t.id === this.editingTaskId);
+                        if (index !== -1) {
+                            this.tasks[index] = updatedTask;
+                        }
+                        
+                        this.showEditTask = false;
+                        this.editingTaskId = null;
+                        
+                    } catch (error) {
+                        this.error = error.message;
+                    }
+                },
+                
+                selectTask(task) {
+                    this.selectedTask = task;
+                    this.loadTaskComments();
+                },
+                
+                // Comments
+                async loadTaskComments() {
+                    if (!this.selectedTask) return;
+                    
+                    try {
+                        this.taskComments = await this.apiCall(`/comments/task/${this.selectedTask.id}`);
+                    } catch (error) {
+                        console.error('Failed to load comments:', error);
+                    }
+                },
+                
+                async addComment() {
+                    try {
+                        const formData = new FormData();
+                        formData.append('content', this.newComment.content);
+                        formData.append('task_id', this.selectedTask.id);
+                        
+                        if (this.newComment.file) {
+                            formData.append('file', this.newComment.file);
+                        }
+                        
+                        const response = await fetch(`${this.apiBaseUrl}/comments/`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${this.token}`
+                            },
+                            body: formData
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Failed to add comment');
+                        }
+                        
+                        // Reload comments to get the latest state
+                        this.loadTaskComments();
+                        this.newComment = { content: '', file: null };
+                        // Also clear the file input visually
+                        document.querySelector('input[type="file"]').value = '';
+                        
+                    } catch (error) {
+                        this.error = error.message;
+                    }
+                },
+                
+                async updateCommentStatus(commentId, status) {
+                    try {
+                        const updatedComment = await this.apiCall(`/comments/${commentId}/status`, {
+                            method: 'PUT',
+                            body: JSON.stringify({ status })
+                        });
+                        
+                        const index = this.taskComments.findIndex(c => c.id === commentId);
+                        if (index !== -1) {
+                            this.taskComments[index] = updatedComment;
+                        }
+                        
+                    } catch (error) {
+                        this.error = error.message;
+                    }
+                },
+                
+                handleFileSelect(event) {
+                    this.newComment.file = event.target.files[0];
+                },
+                
+                // WebSocket
+                connectWebSocket() {
+                    if (!this.user) return;
+                    
+                    this.websocket = new WebSocket(`ws://localhost:8000/ws/${this.user.id}`);
+                    
+                    this.websocket.onmessage = (event) => {
+                        const message = JSON.parse(event.data);
+                        this.handleWebSocketMessage(message);
+                    };
+                    
+                    this.websocket.onclose = () => {
+                        // Reconnect after 5 seconds
+                        setTimeout(() => {
+                            if (this.user) {
+                                this.connectWebSocket();
+                            }
+                        }, 5000);
+                    };
+                },
+                
+                handleWebSocketMessage(message) {
+                    if (message.type === 'new_comment') {
+                        const { taskId, taskTitle, authorName } = message.payload;
+                        this.addNotification(`New comment on "${taskTitle}" by ${authorName}`);
+                        // If the user is viewing the task, refresh the comments
+                        if (this.selectedTask && this.selectedTask.id === taskId) {
+                            this.loadTaskComments();
+                        }
+                    } else if (message.type === 'comment_status_update') {
+                        const { taskId, taskTitle, status, reviewerName } = message.payload;
+                        this.addNotification(`Your comment on "${taskTitle}" was ${status} by ${reviewerName}`);
+                         // If the user is viewing the task, refresh the comments
+                        if (this.selectedTask && this.selectedTask.id === taskId) {
+                            this.loadTaskComments();
+                        }
+                    }
+                },
+                
+                // Notifications
+                addNotification(message) {
+                    const notification = {
+                        id: Date.now(),
+                        message,
+                        timestamp: new Date()
+                    };
+                    this.notifications.unshift(notification);
+                    
+                    // Keep only last 10 notifications
+                    if (this.notifications.length > 10) {
+                        this.notifications = this.notifications.slice(0, 10);
+                    }
+                },
+                
+                clearNotifications() {
+                    this.notifications = [];
+                    this.showNotifications = false;
+                },
+                
+                // Utility Functions
+                formatDate(dateString) {
+                    if (!dateString) return '';
+                    return new Date(dateString).toLocaleString();
+                },
+                
+                getStatusColor(status) {
+                    const colors = {
+                        'Pending': 'bg-yellow-100 text-yellow-800',
+                        'In Progress': 'bg-blue-100 text-blue-800',
+                        'Completed': 'bg-green-100 text-green-800',
+                        'On Hold': 'bg-gray-100 text-gray-800'
+                    };
+                    return colors[status] || 'bg-gray-100 text-gray-800';
+                },
+                
+                getCommentStatusColor(status) {
+                    const colors = {
+                        'pending': 'bg-yellow-100 text-yellow-800',
+                        'approved': 'bg-green-100 text-green-800',
+                        'rejected': 'bg-red-100 text-red-800'
+                    };
+                    return colors[status] || 'bg-gray-100 text-gray-800';
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

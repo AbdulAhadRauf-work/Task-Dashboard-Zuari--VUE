@@ -1,0 +1,7 @@
+*.db
+*.pyc
+alembic/
+*.env
+__pycache__
+uploads
+*.ini
