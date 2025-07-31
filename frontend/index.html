@@ -771,7 +771,9 @@
                     websocket: null,
                     
                     // API Base URL
-                    apiBaseUrl: 'http://localhost:8000'
+                    apiBaseUrl: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                        ? 'http://localhost:8000'
+                        : `${window.location.protocol}//${window.location.host.replace(/:[0-9]+$/, ':8000')}`,
                 }
             },
             
@@ -1085,7 +1087,13 @@
                 connectWebSocket() {
                     if (!this.user) return;
                     
-                    this.websocket = new WebSocket(`ws://localhost:8000/ws/${this.user.id}`);
+                    this.websocket = new WebSocket(
+                        (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
+                        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                            ? 'localhost:8000'
+                            : window.location.host.replace(/:[0-9]+$/, ':8000')) +
+                        `/ws/${this.user.id}`
+                    );
                     
                     this.websocket.onmessage = (event) => {
                         const message = JSON.parse(event.data);
