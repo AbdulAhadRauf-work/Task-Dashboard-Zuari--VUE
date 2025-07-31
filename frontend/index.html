@@ -454,6 +454,7 @@
                                             @change="handleFileSelect"
                                             class="text-sm text-gray-500"
                                             accept="*/*"
+                                            ref="fileInputRef"
                                         />
                                         <button 
                                             type="submit"
@@ -774,6 +775,11 @@
                     apiBaseUrl: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
                         ? 'http://localhost:8000'
                         : `${window.location.protocol}//${window.location.host.replace(/:[0-9]+$/, ':8000')}`,
+
+                    // File Input Ref
+                    fileInputRef: null,
+                    // WebSocket Reconnect Flag
+                    websocketReconnectAllowed: true,
                 }
             },
             
@@ -788,29 +794,24 @@
                 async login() {
                     this.loading = true;
                     this.error = null;
-                    
                     try {
                         const formData = new FormData();
                         formData.append('username', this.loginForm.username);
                         formData.append('password', this.loginForm.password);
-                        
                         const response = await fetch(`${this.apiBaseUrl}/token`, {
                             method: 'POST',
                             body: formData
                         });
-                        
-                        // if (!response.ok) {
-                        //     throw new Error('Invalid credentials');
-                        // }
-                        
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.detail || 'Invalid credentials');
+                        }
                         const data = await response.json();
                         this.token = data.access_token;
                         localStorage.setItem('token', this.token);
-                        
                         await this.getCurrentUser();
                         this.currentView = 'dashboard';
                         this.connectWebSocket();
-                        
                     } catch (error) {
                         this.error = error.message;
                     } finally {
@@ -863,6 +864,7 @@
                     this.user = null;
                     this.currentView = 'login';
                     localStorage.removeItem('token');
+                    this.websocketReconnectAllowed = false;
                     if (this.websocket) {
                         this.websocket.close();
                     }
@@ -1054,8 +1056,7 @@
                         // Reload comments to get the latest state
                         this.loadTaskComments();
                         this.newComment = { content: '', file: null };
-                        // Also clear the file input visually
-                        document.querySelector('input[type="file"]').value = '';
+                        if (this.fileInputRef) this.fileInputRef.value = '';
                         
                     } catch (error) {
                         this.error = error.message;
@@ -1081,12 +1082,13 @@
                 
                 handleFileSelect(event) {
                     this.newComment.file = event.target.files[0];
+                    this.fileInputRef = event.target;
                 },
                 
                 // WebSocket
                 connectWebSocket() {
                     if (!this.user) return;
-                    
+                    this.websocketReconnectAllowed = true;
                     this.websocket = new WebSocket(
                         (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
                         (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
@@ -1101,9 +1103,9 @@
                     };
                     
                     this.websocket.onclose = () => {
-                        // Reconnect after 5 seconds
+                        // Reconnect after 5 seconds only if allowed
                         setTimeout(() => {
-                            if (this.user) {
+                            if (this.user && this.websocketReconnectAllowed) {
                                 this.connectWebSocket();
                             }
                         }, 5000);
