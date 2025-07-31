@@ -6,9 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
+from typing import List
 
 import crud, schemas, security, models
-from dependencies import get_db, get_current_active_user
+from dependencies import get_db, get_current_active_user, require_roles
 
 router = APIRouter(tags=["Authentication"])
 
@@ -37,3 +38,7 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 @router.get("/users/me", response_model=schemas.User)
 async def read_users_me(current_user: models.User = Depends(get_current_active_user)):
     return current_user
+
+@router.get("/users/", response_model=List[schemas.User])
+def get_all_users(db: Session = Depends(get_db), current_user: models.User = Depends(require_roles([models.Role.CEO, models.Role.MANAGER]))):
+    return crud.get_users(db)
